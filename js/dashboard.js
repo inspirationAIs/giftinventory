@@ -22,13 +22,11 @@ const Dashboard = (function() {
     const low = items.filter(i => i.currentStock <= i.safeStock);
     const cm = new Date().toISOString().slice(0,7);
     const monthOut = co.filter(c => c.date.startsWith(cm)).reduce((s,c) => s+(c.quantity||0), 0);
-    const asset = items.reduce((s,i) => s + (i.currentStock||0)*(i.unitCost||0), 0);
 
     setText('kpi-kinds', totalKinds + '종');
     setText('kpi-stock', totalQty.toLocaleString() + '개');
     setText('kpi-month', monthOut.toLocaleString() + '개');
     setText('kpi-low', low.length + '종');
-    setText('kpi-asset', Math.round(asset/10000).toLocaleString() + '만원');
 
     const badge = document.getElementById('kpi-low-badge');
     if (badge) {
@@ -57,16 +55,23 @@ const Dashboard = (function() {
     const ctx = document.getElementById('ch-stock')?.getContext('2d');
     if (!ctx) return;
     const items = Storage.getItems();
+    const stockIns = Storage.getStockIns();
+    const totalInMap = {};
+    items.forEach(i => totalInMap[i.id] = 0);
+    stockIns.forEach(s => {
+      if (totalInMap[s.itemId] !== undefined) totalInMap[s.itemId] += (s.quantity || 0);
+    });
+
     const labels = items.map(i => i.name.length > 10 ? i.name.slice(0,9)+'..' : i.name);
-    const bg = items.map(i => i.currentStock<=0?'#ef4444':i.currentStock<=i.safeStock?'#f59e0b':'#3b82f6');
+    const bg = items.map(i => i.currentStock<=0?'#ef4444':i.currentStock<=i.safeStock?'#f59e0b':'#e6007e');
     if (charts.stock) charts.stock.destroy();
     charts.stock = new Chart(ctx, {
       type:'bar',
       data:{ labels, datasets:[
         { label:'현재고', data:items.map(i=>i.currentStock), backgroundColor:bg, borderRadius:6 },
-        { label:'안전재고', data:items.map(i=>i.safeStock), backgroundColor:'#cbd5e1', borderRadius:6 }
+        { label:'총 입고 수량', data:items.map(i=>totalInMap[i.id]), backgroundColor:'#cbd5e1', borderRadius:6 }
       ]},
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11}}}}, scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'#f1f5f9'}}} }
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'#f1f5f9'}}} }
     });
   }
 
@@ -80,10 +85,10 @@ const Dashboard = (function() {
     const labels = Object.keys(days).map(k=>k.slice(5));
     if (charts.trend) charts.trend.destroy();
     const g = ctx.createLinearGradient(0,0,0,200);
-    g.addColorStop(0,'rgba(37,99,235,0.3)'); g.addColorStop(1,'rgba(37,99,235,0)');
+    g.addColorStop(0,'rgba(230,0,126,0.3)'); g.addColorStop(1,'rgba(230,0,126,0)');
     charts.trend = new Chart(ctx, {
       type:'line',
-      data:{ labels, datasets:[{ label:'반출', data:Object.values(days), borderColor:'#2563eb', backgroundColor:g, fill:true, tension:0.35, borderWidth:2.5, pointBackgroundColor:'#1d4ed8', pointRadius:4 }] },
+      data:{ labels, datasets:[{ label:'반출', data:Object.values(days), borderColor:'#e6007e', backgroundColor:g, fill:true, tension:0.35, borderWidth:2.5, pointBackgroundColor:'#e6007e', pointRadius:4 }] },
       options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'#f1f5f9'}}} }
     });
   }
@@ -93,7 +98,7 @@ const Dashboard = (function() {
     if (!ctx) return;
     const map = {};
     Storage.getItems().forEach(i => { map[i.category] = (map[i.category]||0) + (i.currentStock||0); });
-    const colors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b'];
+    const colors = ['#e6007e','#222222','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#64748b'];
     if (charts.cat) charts.cat.destroy();
     charts.cat = new Chart(ctx, {
       type:'doughnut',
@@ -111,7 +116,7 @@ const Dashboard = (function() {
     if (charts.reps) charts.reps.destroy();
     charts.reps = new Chart(ctx, {
       type:'bar',
-      data:{ labels:sorted.map(s=>s[0]), datasets:[{ label:'반출(개)', data:sorted.map(s=>s[1]), backgroundColor:'#6366f1', borderRadius:6 }] },
+      data:{ labels:sorted.map(s=>s[0]), datasets:[{ label:'반출(개)', data:sorted.map(s=>s[1]), backgroundColor:'#111111', borderRadius:6 }] },
       options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true,grid:{color:'#f1f5f9'},ticks:{stepSize:1}},y:{grid:{display:false}}} }
     });
   }

@@ -1,8 +1,8 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
 :root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
+  --primary: #e6007e;
+  --primary-hover: #c5006b;
 }
 
 * { box-sizing: border-box; }

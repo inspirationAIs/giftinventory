@@ -122,7 +122,11 @@ const Storage = (function() {
   function getItem(id){return (db.items||[]).find(i=>i.id===id);}
   function getCheckouts(){return db.checkouts||[];}
   function getStockIns(){return db.stockIns||[];}
-  function getCategories(){return db.categories||[];}
+  function getCategories(){
+    const itemCats = (db.items || []).map(i => i.category).filter(Boolean);
+    const allCats = [...(db.categories || []), ...itemCats];
+    return [...new Set(allCats)];
+  }
   function getTeamMembers(){return db.teamMembers||[];}
   function getServerStatus(){return {online,serverInfo};}
 

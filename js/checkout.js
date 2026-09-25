@@ -20,7 +20,13 @@ const Checkout = (function() {
     renderItems();
     renderLogs();
     const m = Storage.getTeamMembers();
-    if (m.length) pickReq(m[0].name, m[0].team);
+    let savedRep = null;
+    try { savedRep = JSON.parse(localStorage.getItem('promo_my_rep') || 'null'); } catch(e){}
+    if (savedRep && m.some(x => x.name === savedRep.name)) {
+      pickReq(savedRep.name, savedRep.team);
+    } else if (m.length) {
+      pickReq(m[0].name, m[0].team);
+    }
   }
 
   function bindEvents() {
@@ -73,11 +79,22 @@ const Checkout = (function() {
   function parseSmart(text) {
     const box = document.getElementById('smart-preview');
     if (!text?.trim()) { if(box) box.classList.add('hidden'); return null; }
-    let clean = text.trim(), qty = 1, foundId = null;
+    let clean = text.trim(), qty = 1, foundId = null, matchedMember = null;
 
+    // 1. 담당자(팀원 이름) 감지
+    for (const m of Storage.getTeamMembers()) {
+      if (clean.includes(m.name)) {
+        matchedMember = m;
+        clean = clean.replace(m.name, ' ').trim();
+        break;
+      }
+    }
+
+    // 2. 수량 감지
     const qm = clean.match(/(\d+)\s*(개|세트|팩|박스|ea)?/i);
     if (qm) { qty = parseInt(qm[1]); clean = clean.replace(qm[0],' ').trim(); }
 
+    // 3. 품목 감지
     for (const r of KW) { for (const k of r.kw) { if (clean.includes(k)) { foundId=r.id; clean=clean.replace(k,' ').trim(); break; } } if(foundId) break; }
     if (!foundId) {
       for (const item of Storage.getItems()) {
@@ -88,36 +105,38 @@ const Checkout = (function() {
 
     const matched = foundId ? Storage.getItem(foundId) : null;
     let recipient = clean.replace(/\s+/g,' ').trim() || '지정 고객사';
+    const activeReq = matchedMember?.name || selReq || '미지정';
 
     if (box) {
       box.classList.remove('hidden');
       box.innerHTML = `<div class="flex items-center gap-1.5 text-xs font-semibold text-blue-700 mb-1"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i>자동 감지 결과</div>
         <div class="flex flex-wrap gap-2 text-xs">
+          <span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-medium">담당: <b>${activeReq}</b></span>
           <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium">대상: <b>${recipient}</b></span>
           <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-medium">품목: <b>${matched?.name||'선택 필요'}</b></span>
           <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">수량: <b>${qty}개</b></span>
         </div>`;
       lucide.createIcons();
     }
-    return { recipient, itemId: foundId, quantity: qty };
+    return { recipient, itemId: foundId, quantity: qty, matchedMember };
   }
 
   async function submitSmart() {
     const inp = document.getElementById('smart-input');
-    if (!inp?.value.trim()) { App.toast('입력란에 "구글 운영팀 팀장 우산 1개" 형식으로 입력하세요.','warning'); return; }
+    if (!inp?.value.trim()) { App.toast('입력란에 "황시은 구글 운영팀 우산 1개" 형식으로 입력하세요.','warning'); return; }
     const p = parseSmart(inp.value);
     if (!p?.itemId) { App.toast('품목을 인식하지 못했습니다. 품목명을 포함해 주세요.','warning'); return; }
     const item = Storage.getItem(p.itemId);
     if (!item) { App.toast('품목을 찾을 수 없습니다.','error'); return; }
     if (item.currentStock < p.quantity) { App.toast(`재고 부족 (${item.name}: ${item.currentStock}개)`,'error'); return; }
-    const req = selReq || Storage.getTeamMembers()[0]?.name || '담당자';
-    const team = selTeam || Storage.getTeamMembers()[0]?.team || '영업팀';
+    const req = p.matchedMember?.name || selReq || Storage.getTeamMembers()[0]?.name || '담당자';
+    const team = p.matchedMember?.team || selTeam || Storage.getTeamMembers()[0]?.team || '영업팀';
     try {
       await Storage.addCheckout({ itemId:item.id, quantity:p.quantity, recipient:p.recipient, requester:req, team, purpose:'스마트 간편 반출', memo:'[스마트입력] "'+inp.value.trim()+'"' });
       inp.value='';
       document.getElementById('smart-preview')?.classList.add('hidden');
       App.confetti();
-      App.toast(`✅ ${item.name} ${p.quantity}${item.unit} → ${p.recipient} 반출 완료!`,'success');
+      App.toast(`✅ [${req}] ${item.name} ${p.quantity}${item.unit} → ${p.recipient} 반출 완료!`,'success');
       renderItems(); renderLogs(); Dashboard.refresh(); Inventory.render();
     } catch(e) { App.toast(e.message,'error'); }
   }
@@ -134,6 +153,7 @@ const Checkout = (function() {
 
   function pickReq(name, team) {
     selReq = name; selTeam = team;
+    try { localStorage.setItem('promo_my_rep', JSON.stringify({ name, team })); } catch(e){}
     const ri = document.getElementById('co-requester'), ti = document.getElementById('co-team');
     if (ri) ri.value = name; if (ti) ti.value = team;
     renderReps();

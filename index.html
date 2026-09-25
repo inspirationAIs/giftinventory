@@ -3,10 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>판촉물 재고 & 반출 관리</title>
+  <title>2026년 글로벌고객1팀 판촉물 관리</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#e6007e">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            blue: {
+              50: '#fdf2f8', 100: '#fce7f3', 200: '#fbcfe8', 300: '#f9a8d4',
+              400: '#f472b6', 500: '#ec4899', 600: '#e6007e', 700: '#be185d',
+              800: '#9f1239', 900: '#881337',
+            },
+            indigo: {
+              50: '#f6f6f6', 100: '#e7e7e7', 200: '#d1d1d1', 300: '#b0b0b0',
+              400: '#888888', 500: '#6d6d6d', 600: '#111111', 700: '#000000',
+              800: '#000000', 900: '#000000',
+            }
+          }
+        }
+      }
+    }
+  </script>
   <link rel="stylesheet" href="css/style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -20,8 +40,8 @@
 <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
     <div class="flex items-center gap-2.5 cursor-pointer" onclick="App.switchTab('dashboard')">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow"><i data-lucide="package-check" class="w-4.5 h-4.5"></i></div>
-      <div><h1 class="text-sm font-extrabold text-slate-900 leading-tight">통신사 영업팀 판촉물 관리</h1><p class="text-[10px] text-slate-500 leading-tight">실시간 재고 & 모바일 반출 일지</p></div>
+      <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow"><i data-lucide="package-check" class="w-4.5 h-4.5"></i></div>
+      <div><h1 class="text-sm font-extrabold text-slate-900 leading-tight">2026년 글로벌고객1팀 판촉물 관리</h1><p class="text-[10px] text-slate-500 leading-tight">실시간 재고 & 모바일 반출 일지</p></div>
     </div>
     <div class="flex items-center gap-2">
       <div id="conn-badge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
@@ -46,13 +66,13 @@
 <!-- ═══════════ 탭 1: 대시보드 ═══════════ -->
 <section id="sec-dashboard" class="tab-section space-y-5">
   <!-- 환영 배너 -->
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 rounded-2xl p-5 text-white shadow-xl">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-indigo-700 to-indigo-900 rounded-2xl p-5 text-white shadow-xl">
     <div>
       <div class="flex items-center gap-2 mb-1.5">
-        <span class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-blue-100">🏢 영업팀장 관리자</span>
+        <span class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-blue-100">🏢 글로벌고객1팀</span>
         <span id="kpi-low-badge" class="text-[11px] px-2 py-0.5 rounded-full font-bold bg-emerald-400 text-slate-900">안전</span>
       </div>
-      <h2 class="text-xl font-black tracking-tight mb-0.5">판촉물 실시간 재고 & 출고 대시보드</h2>
+      <h2 class="text-xl font-black tracking-tight mb-0.5">2026년 글로벌고객1팀 판촉물 대시보드</h2>
       <p class="text-[11px] text-blue-100/80">팀원 모바일 반출 내역이 실시간 집계됩니다.</p>
     </div>
     <div class="flex gap-2 shrink-0">
@@ -62,18 +82,29 @@
   </div>
 
   <!-- KPI 카드 -->
-  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+  <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
     <div class="card p-3.5"><div class="flex justify-between mb-1.5"><span class="text-[11px] text-slate-500">등록 품목</span><div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i data-lucide="tags" class="w-3.5 h-3.5"></i></div></div><div id="kpi-kinds" class="text-xl font-black">0종</div></div>
     <div class="card p-3.5"><div class="flex justify-between mb-1.5"><span class="text-[11px] text-slate-500">총 재고</span><div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><i data-lucide="boxes" class="w-3.5 h-3.5"></i></div></div><div id="kpi-stock" class="text-xl font-black text-emerald-600">0개</div></div>
     <div class="card p-3.5"><div class="flex justify-between mb-1.5"><span class="text-[11px] text-slate-500">이달 반출</span><div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i></div></div><div id="kpi-month" class="text-xl font-black text-indigo-600">0개</div></div>
     <div class="card p-3.5"><div class="flex justify-between mb-1.5"><span class="text-[11px] text-slate-500">재고 부족</span><div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center"><i data-lucide="alert-circle" class="w-3.5 h-3.5"></i></div></div><div id="kpi-low" class="text-xl font-black text-rose-600">0종</div></div>
-    <div class="card p-3.5 col-span-2 sm:col-span-1"><div class="flex justify-between mb-1.5"><span class="text-[11px] text-slate-500">보유 총액</span><div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center"><i data-lucide="coins" class="w-3.5 h-3.5"></i></div></div><div id="kpi-asset" class="text-xl font-black">0만원</div></div>
   </div>
 
   <!-- 차트 + QR -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
     <div class="lg:col-span-2 space-y-5">
-      <div class="card p-4"><h3 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="bar-chart-3" class="w-4 h-4 text-blue-600"></i>품목별 현재고 vs 안전재고</h3><div class="h-60"><canvas id="ch-stock"></canvas></div></div>
+      <div class="card p-4">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+          <h3 class="text-sm font-bold flex items-center gap-1.5"><i data-lucide="bar-chart-3" class="w-4 h-4 text-blue-600"></i>품목별 현재고 vs 총 입고 수량</h3>
+          <div class="flex flex-wrap items-center gap-2.5 text-[10px] text-slate-500 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">
+            <span class="font-bold text-slate-600 mr-0.5">상태:</span>
+            <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-[3px] bg-blue-500"></span>여유</div>
+            <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-[3px] bg-amber-500"></span>발주필요(안전재고↓)</div>
+            <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-[3px] bg-red-500"></span>품절</div>
+            <div class="flex items-center gap-1 ml-1 pl-2 border-l border-slate-200"><span class="w-2.5 h-2.5 rounded-[3px] bg-slate-300"></span>총 입고량</div>
+          </div>
+        </div>
+        <div class="h-60"><canvas id="ch-stock"></canvas></div>
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div class="card p-4"><h3 class="text-sm font-bold mb-2 flex items-center gap-1.5"><i data-lucide="activity" class="w-4 h-4 text-indigo-600"></i>최근 7일 반출 추이</h3><div class="h-44"><canvas id="ch-trend"></canvas></div></div>
         <div class="card p-4"><h3 class="text-sm font-bold mb-2 flex items-center gap-1.5"><i data-lucide="pie-chart" class="w-4 h-4 text-emerald-600"></i>카테고리별 재고</h3><div class="h-44"><canvas id="ch-cat"></canvas></div></div>
@@ -101,23 +132,44 @@
 
 <!-- ═══════════ 탭 2: 반출 일지 ═══════════ -->
 <section id="sec-checkout" class="tab-section hidden space-y-5">
-  <div class="card p-5 sm:p-6">
-    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-      <div class="flex items-center gap-2.5"><div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow"><i data-lucide="send" class="w-4.5 h-4.5"></i></div><div><h2 class="text-base font-extrabold">모바일 반출 일지 작성</h2><p class="text-[11px] text-slate-500">외근 출발 전 3초 만에 등록</p></div></div>
-      <span class="text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">📱 모바일 최적화</span>
-    </div>
-
-    <!-- 스마트 입력 -->
-    <div class="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 p-4 rounded-2xl border border-blue-200/80 mb-5">
-      <label class="text-xs font-bold text-blue-900 flex items-center gap-1 mb-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-600"></i>스마트 1초 간편 입력</label>
-      <div class="flex gap-2">
-        <input id="smart-input" type="text" placeholder='예: 구글 운영팀 팀장 우산 1개' class="flex-1 px-3.5 py-2.5 bg-white border border-blue-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-inner">
-        <button id="btn-smart" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow flex items-center gap-1 shrink-0">즉시 등록<i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- 왼쪽: 모바일 스마트 간편 입력 -->
+    <div class="card p-5 sm:p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-sm flex flex-col">
+      <div class="flex items-center justify-between border-b border-blue-200/60 pb-3 mb-5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md"><i data-lucide="smartphone" class="w-4.5 h-4.5"></i></div>
+          <div><h2 class="text-base font-extrabold text-blue-900">모바일 스마트 간편 일지</h2><p class="text-[11px] text-blue-600">외근 출발 전 3초 만에 빠른 등록</p></div>
+        </div>
+        <span class="text-[10px] font-bold text-white bg-blue-600 px-2 py-0.5 rounded-full shadow-sm">모바일 추천</span>
       </div>
-      <div id="smart-preview" class="hidden mt-2 p-2 bg-white/90 rounded-xl border border-blue-200"></div>
+      
+      <div class="space-y-4 flex-1">
+        <label class="text-sm font-bold text-blue-900 flex items-center gap-1.5"><i data-lucide="sparkles" class="w-4 h-4 text-blue-600"></i>AI 간편 텍스트 입력</label>
+        <div class="flex flex-col gap-2.5">
+          <input id="smart-input" type="text" placeholder="예: 황시은 구글 운영팀 우산 1개 (또는 구글 우산 1개)" class="w-full px-4 py-3.5 bg-white border border-blue-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-inner">
+          <button id="btn-smart" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-extrabold rounded-xl shadow-md flex items-center justify-center gap-1.5">즉시 등록하기<i data-lucide="arrow-right" class="w-4 h-4"></i></button>
+        </div>
+        <div id="smart-preview" class="hidden mt-2 p-3 bg-white/90 rounded-xl border border-blue-200 text-xs"></div>
+        
+        <div class="mt-4 p-4 bg-white/70 rounded-xl border border-blue-100/60 text-[12px] text-slate-700 space-y-1.5 leading-relaxed">
+          <p class="font-bold text-blue-900 flex items-center gap-1">💡 담당자 인식 방식 (2가지 중 편한 방법 사용)</p>
+          <p>1. <strong>문장에 이름 포함</strong>: <code>황시은 구글 우산 1개</code>처럼 쓰면 이름(황시은)을 AI가 담당자로 즉시 감지합니다.</p>
+          <p>2. <strong>본인 이름 1회 저장</strong>: 오른쪽(또는 아래) 담당자 목록에서 내 이름을 한 번만 눌러두면, 스마트폰이 내 이름을 계속 기억하므로 다음부터는 이름 없이 <code>구글 우산 1개</code>만 쳐도 내 이름으로 등록됩니다!</p>
+        </div>
+      </div>
     </div>
 
-    <form id="co-form" class="space-y-5">
+    <!-- 오른쪽: PC 상세 입력 폼 -->
+    <div class="card p-5 sm:p-6 border-slate-200 shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200"><i data-lucide="monitor" class="w-4.5 h-4.5"></i></div>
+          <div><h2 class="text-base font-extrabold text-slate-800">PC 상세 일지 작성</h2><p class="text-[11px] text-slate-500">사무실에서 꼼꼼하게 직접 선택할 때</p></div>
+        </div>
+        <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">PC 추천</span>
+      </div>
+
+      <form id="co-form" class="space-y-5">
       <!-- 1 담당자 -->
       <div><div class="flex justify-between mb-1.5"><label class="text-xs font-bold text-slate-700 flex items-center gap-1"><span class="w-4.5 h-4.5 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">1</span>담당자</label><span class="text-[11px] text-slate-400">본인 탭</span></div>
         <div id="reps-box" class="flex flex-wrap gap-1.5"></div>
@@ -170,8 +222,9 @@
 
       <div><label class="text-xs font-bold text-slate-700 mb-1 block">메모 (선택)</label><input id="co-memo" type="text" placeholder="추가 사항" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"></div>
 
-      <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] text-white text-sm font-extrabold rounded-2xl shadow-lg flex items-center justify-center gap-2"><i data-lucide="check" class="w-5 h-5"></i>반출 일지 등록 (재고 즉시 차감)</button>
+      <button type="submit" class="w-full py-3.5 bg-slate-800 hover:bg-slate-900 active:scale-[0.99] text-white text-sm font-extrabold rounded-2xl shadow-lg flex items-center justify-center gap-2"><i data-lucide="check" class="w-5 h-5"></i>PC 상세 일지 등록 (재고 차감)</button>
     </form>
+    </div>
   </div>
 
   <!-- 반출 로그 테이블 -->
