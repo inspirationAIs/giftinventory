@@ -11,6 +11,7 @@ const App = (function() {
     Inventory.init();
     bindNav();
     bindData();
+    setupA2HS();
 
     const copy = document.getElementById('btn-copy-url');
     if (copy) copy.onclick = () => {
@@ -20,6 +21,43 @@ const App = (function() {
 
     startPoll();
     lucide.createIcons();
+  }
+
+  let deferredPrompt;
+  function setupA2HS() {
+    const btn = document.getElementById('btn-a2hs');
+    if (!btn) return;
+    
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) return;
+
+    // iOS Detection
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIOS) {
+      btn.classList.remove('hidden');
+      btn.onclick = () => {
+        toast('하단의 [공유] 버튼을 누른 후, [홈 화면에 추가]를 선택해주세요.', 'info');
+      };
+      return;
+    }
+
+    // Android / Chrome
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      btn.classList.remove('hidden');
+    });
+
+    btn.onclick = async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') btn.classList.add('hidden');
+        deferredPrompt = null;
+      } else {
+        toast('우측 상단 메뉴(⋮)에서 [홈 화면에 추가]를 선택해주세요.', 'info');
+      }
+    };
   }
 
   /* ── 탭 네비게이션 ── */

@@ -1,0 +1,15 @@
+{
+  "name": "글로벌고객1팀 판촉물 관리",
+  "short_name": "판촉물관리",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#e6007e",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2897/2897785.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
