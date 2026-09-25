@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>판촉물 재고 & 반출 관리</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2563eb">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body class="min-h-screen pb-20 lg:pb-8">
+
+<!-- ===== 헤더 ===== -->
+<header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+    <div class="flex items-center gap-2.5 cursor-pointer" onclick="App.switchTab('dashboard')">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow"><i data-lucide="package-check" class="w-4.5 h-4.5"></i></div>
+      <div><h1 class="text-sm font-extrabold text-slate-900 leading-tight">통신사 영업팀 판촉물 관리</h1><p class="text-[10px] text-slate-500 leading-tight">실시간 재고 & 모바일 반출 일지</p></div>
+    </div>
+    <div class="flex items-center gap-2">
+      <div id="conn-badge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span id="conn-text">연결 확인 중…</span>
+      </div>
+      <button class="btn-excel hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>엑셀</button>
+    </div>
+  </div>
+  <!-- 데스크톱 탭 -->
+  <div class="hidden lg:block border-t border-slate-100 bg-slate-50/70">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-1.5 py-1.5">
+      <button data-tab="dashboard" class="nav-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm"><i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>대시보드</button>
+      <button data-tab="checkout" class="nav-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600"><i data-lucide="send" class="w-3.5 h-3.5"></i>반출 일지</button>
+      <button data-tab="inventory" class="nav-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600"><i data-lucide="boxes" class="w-3.5 h-3.5"></i>재고 관리</button>
+      <button data-tab="settings" class="nav-btn flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600"><i data-lucide="settings" class="w-3.5 h-3.5"></i>데이터 관리</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5">
+
+<!-- ═══════════ 탭 1: 대시보드 ═══════════ -->
+<section id="sec-dashboard" class="tab-section space-y-5">
+  <!-- 환영 배너 -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 rounded-2xl p-5 text-white shadow-xl">
+    <div>
+      <div class="flex items-center gap-2 mb-1.5">
+        <span class="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-blue-100">🏢 영업팀장 관리자</span>
+        <span id="kpi-low-badge" class="text-[11px] px-2 py-0.5 rounded-full font-bold bg-emerald-400 text-slate-900">안전</span>
+      </div>
+      <h2 class="text-xl font-black tracking-tight mb-0.5">판촉물 실시간 재고 & 출고 대시보드</h2>
+      <p class="text-[11px] text-blue-100/80">팀원 모바일 반출 내역이 실시간 집계됩니다.</p>
+    </div>
+    <div class="flex gap-2 shrink-0">
+      <button onclick="App.switchTab('checkout')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-blue-700 text-xs font-bold shadow"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>반출 등록</button>
+      <button onclick="Inventory.openStockInModal()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 text-white text-xs font-bold border border-white/20"><i data-lucide="download" class="w-3.5 h-3.5"></i>입고 등록</button>
+    </div>
+  </div>
+
+  <!-- KPI 카드 -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div class="card p-3.5"><div class="flex justify-between mb-1.5"><span class="text-[11px] text-slate-500">등록 품목</span><div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i data-lucide="tags" class="w-3.5 h-3.5"></i></div></div><div id="kpi-kinds" class="text-xl font-black">0종</div></div>
+    <div class="card p-3.5"><div class="flex justify-between mb-1.5"><span class="text-[11px] text-slate-500">총 재고</span><div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center"><i data-lucide="boxes" class="w-3.5 h-3.5"></i></div></div><div id="kpi-stock" class="text-xl font-black text-emerald-600">0개</div></div>
+    <div class="card p-3.5"><div class="flex justify-between mb-1.5"><span class="text-[11px] text-slate-500">이달 반출</span><div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i></div></div><div id="kpi-month" class="text-xl font-black text-indigo-600">0개</div></div>
+    <div class="card p-3.5"><div class="flex justify-between mb-1.5"><span class="text-[11px] text-slate-500">재고 부족</span><div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center"><i data-lucide="alert-circle" class="w-3.5 h-3.5"></i></div></div><div id="kpi-low" class="text-xl font-black text-rose-600">0종</div></div>
+    <div class="card p-3.5 col-span-2 sm:col-span-1"><div class="flex justify-between mb-1.5"><span class="text-[11px] text-slate-500">보유 총액</span><div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center"><i data-lucide="coins" class="w-3.5 h-3.5"></i></div></div><div id="kpi-asset" class="text-xl font-black">0만원</div></div>
+  </div>
+
+  <!-- 차트 + QR -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="lg:col-span-2 space-y-5">
+      <div class="card p-4"><h3 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="bar-chart-3" class="w-4 h-4 text-blue-600"></i>품목별 현재고 vs 안전재고</h3><div class="h-60"><canvas id="ch-stock"></canvas></div></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div class="card p-4"><h3 class="text-sm font-bold mb-2 flex items-center gap-1.5"><i data-lucide="activity" class="w-4 h-4 text-indigo-600"></i>최근 7일 반출 추이</h3><div class="h-44"><canvas id="ch-trend"></canvas></div></div>
+        <div class="card p-4"><h3 class="text-sm font-bold mb-2 flex items-center gap-1.5"><i data-lucide="pie-chart" class="w-4 h-4 text-emerald-600"></i>카테고리별 재고</h3><div class="h-44"><canvas id="ch-cat"></canvas></div></div>
+      </div>
+    </div>
+    <div class="space-y-5">
+      <!-- QR -->
+      <div class="card p-4 text-center border-2 border-blue-500/30 bg-gradient-to-b from-blue-50/50 to-white">
+        <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-600 text-white mb-2"><i data-lucide="smartphone" class="w-3 h-3"></i>스마트폰 접속 QR</div>
+        <p class="text-xs text-slate-500 mb-2">카메라로 스캔하면 바로 열립니다</p>
+        <div class="p-2.5 bg-white rounded-xl inline-block border border-slate-200 mb-2"><div id="qr-box"></div></div>
+        <div class="bg-slate-100 rounded-lg p-2 flex items-center justify-between text-xs">
+          <span id="mobile-url" class="truncate font-mono text-[11px] text-blue-700">http://…</span>
+          <button id="btn-copy-url" class="text-blue-600 font-semibold shrink-0 ml-2">복사</button>
+        </div>
+        <p class="text-[10px] text-slate-400 mt-1.5">※ 같은 Wi-Fi에서 접속 가능</p>
+      </div>
+      <!-- 팀원 랭킹 -->
+      <div class="card p-4"><h3 class="text-sm font-bold mb-2 flex items-center gap-1.5"><i data-lucide="award" class="w-4 h-4 text-amber-500"></i>팀원별 반출 랭킹</h3><div class="h-36"><canvas id="ch-reps"></canvas></div></div>
+      <!-- 피드 -->
+      <div class="card p-4"><div class="flex justify-between mb-2"><h3 class="text-sm font-bold flex items-center gap-1.5"><i data-lucide="clock" class="w-4 h-4 text-slate-600"></i>최근 활동</h3><button onclick="App.switchTab('checkout')" class="text-xs text-blue-600">전체</button></div><div id="feed-list" class="space-y-0.5"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 탭 2: 반출 일지 ═══════════ -->
+<section id="sec-checkout" class="tab-section hidden space-y-5">
+  <div class="card p-5 sm:p-6">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+      <div class="flex items-center gap-2.5"><div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow"><i data-lucide="send" class="w-4.5 h-4.5"></i></div><div><h2 class="text-base font-extrabold">모바일 반출 일지 작성</h2><p class="text-[11px] text-slate-500">외근 출발 전 3초 만에 등록</p></div></div>
+      <span class="text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">📱 모바일 최적화</span>
+    </div>
+
+    <!-- 스마트 입력 -->
+    <div class="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 p-4 rounded-2xl border border-blue-200/80 mb-5">
+      <label class="text-xs font-bold text-blue-900 flex items-center gap-1 mb-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-600"></i>스마트 1초 간편 입력</label>
+      <div class="flex gap-2">
+        <input id="smart-input" type="text" placeholder='예: 구글 운영팀 팀장 우산 1개' class="flex-1 px-3.5 py-2.5 bg-white border border-blue-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-inner">
+        <button id="btn-smart" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold rounded-xl shadow flex items-center gap-1 shrink-0">즉시 등록<i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>
+      </div>
+      <div id="smart-preview" class="hidden mt-2 p-2 bg-white/90 rounded-xl border border-blue-200"></div>
+    </div>
+
+    <form id="co-form" class="space-y-5">
+      <!-- 1 담당자 -->
+      <div><div class="flex justify-between mb-1.5"><label class="text-xs font-bold text-slate-700 flex items-center gap-1"><span class="w-4.5 h-4.5 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">1</span>담당자</label><span class="text-[11px] text-slate-400">본인 탭</span></div>
+        <div id="reps-box" class="flex flex-wrap gap-1.5"></div>
+        <input type="hidden" id="co-requester"><input type="hidden" id="co-team">
+      </div>
+
+      <!-- 2 품목 -->
+      <div><label class="text-xs font-bold text-slate-700 flex items-center gap-1 mb-1.5"><span class="w-4.5 h-4.5 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">2</span>판촉물 선택</label>
+        <div id="items-box" class="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto p-1 bg-slate-50/50 rounded-2xl border border-slate-100"></div>
+        <select id="co-item-sel" class="w-full mt-1.5 px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl"></select>
+      </div>
+
+      <!-- 3 수량 -->
+      <div><label class="text-xs font-bold text-slate-700 flex items-center gap-1 mb-1.5"><span class="w-4.5 h-4.5 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center font-bold">3</span>수량</label>
+        <div class="flex items-center gap-2.5">
+          <div class="flex items-center bg-slate-100 rounded-xl border border-slate-200 p-0.5">
+            <button type="button" id="qty-minus" class="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center"><i data-lucide="minus" class="w-4 h-4"></i></button>
+            <input type="number" id="co-qty" value="1" min="1" class="w-14 text-center bg-transparent text-base font-extrabold focus:outline-none">
+            <button type="button" id="qty-plus" class="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center"><i data-lucide="plus" class="w-4 h-4"></i></button>
+          </div>
+          <button type="button" data-add="1" class="qty-chip px-2.5 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold">+1</button>
+          <button type="button" data-add="2" class="qty-chip px-2.5 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold">+2</button>
+          <button type="button" data-add="5" class="qty-chip px-2.5 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold">+5</button>
+        </div>
+      </div>
+
+      <!-- 4 대상 & 목적 -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-bold text-slate-700 mb-1 block"><span class="w-4.5 h-4.5 inline-flex rounded-full bg-blue-600 text-white text-[10px] items-center justify-center font-bold mr-0.5">4</span>전달 대상 <span class="text-rose-500">*</span></label>
+          <input id="co-recipient" type="text" placeholder="예: 구글 운영팀 팀장" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <div class="flex flex-wrap gap-1 mt-1.5">
+            <button type="button" data-client="구글 운영팀 팀장" class="client-chip px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-600 hover:bg-slate-200">구글</button>
+            <button type="button" data-client="네이버 비즈니스팀" class="client-chip px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-600 hover:bg-slate-200">네이버</button>
+            <button type="button" data-client="카카오 엔터프라이즈" class="client-chip px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-600 hover:bg-slate-200">카카오</button>
+            <button type="button" data-client="삼성전자 B2B" class="client-chip px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-600 hover:bg-slate-200">삼성</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-700 mb-1 block"><span class="w-4.5 h-4.5 inline-flex rounded-full bg-blue-600 text-white text-[10px] items-center justify-center font-bold mr-0.5">5</span>목적</label>
+          <input id="co-purpose" type="text" value="고객사 미팅" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none mb-1.5">
+          <div class="flex flex-wrap gap-1">
+            <button type="button" data-purpose="고객사 미팅" class="purpose-chip px-2 py-0.5 rounded-lg text-xs font-medium bg-blue-600 text-white">미팅</button>
+            <button type="button" data-purpose="신규 개통 프로모션" class="purpose-chip px-2 py-0.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700">개통</button>
+            <button type="button" data-purpose="계약 감사" class="purpose-chip px-2 py-0.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700">계약감사</button>
+            <button type="button" data-purpose="VIP 접대" class="purpose-chip px-2 py-0.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700">VIP</button>
+          </div>
+        </div>
+      </div>
+
+      <div><label class="text-xs font-bold text-slate-700 mb-1 block">메모 (선택)</label><input id="co-memo" type="text" placeholder="추가 사항" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"></div>
+
+      <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] text-white text-sm font-extrabold rounded-2xl shadow-lg flex items-center justify-center gap-2"><i data-lucide="check" class="w-5 h-5"></i>반출 일지 등록 (재고 즉시 차감)</button>
+    </form>
+  </div>
+
+  <!-- 반출 로그 테이블 -->
+  <div class="card overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <h3 class="text-sm font-bold flex items-center gap-1.5"><i data-lucide="clipboard-list" class="w-4 h-4 text-blue-600"></i>반출 일지 내역</h3>
+      <div class="flex items-center gap-2">
+        <div class="relative"><input id="co-search" type="text" placeholder="검색" class="w-40 pl-7 pr-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"><i data-lucide="search" class="w-3 h-3 text-slate-400 absolute left-2 top-2"></i></div>
+        <select id="co-filter" class="px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-xl"><option value="all">전체</option><option value="today">오늘</option><option value="week">7일</option><option value="month">이달</option></select>
+        <button class="btn-excel px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-1"><i data-lucide="download" class="w-3 h-3"></i>엑셀</button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead><tr class="bg-slate-50/70 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-100">
+          <th class="px-3 py-2.5">일시</th><th class="px-3 py-2.5">품목</th><th class="px-3 py-2.5 text-center">수량</th><th class="px-3 py-2.5">반출자</th><th class="px-3 py-2.5">대상</th><th class="px-3 py-2.5">목적</th><th class="px-3 py-2.5">메모</th><th class="px-3 py-2.5 text-right">취소</th>
+        </tr></thead>
+        <tbody id="co-tbody"></tbody>
+      </table>
+    </div>
+    <div id="co-empty" class="hidden py-10 text-center text-slate-400 text-xs"><i data-lucide="inbox" class="w-7 h-7 mx-auto mb-1 opacity-40"></i>반출 기록 없음</div>
+  </div>
+</section>
+
+<!-- ═══════════ 탭 3: 재고 관리 ═══════════ -->
+<section id="sec-inventory" class="tab-section hidden space-y-5">
+  <div class="card p-4 space-y-3">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div><h2 class="text-base font-extrabold flex items-center gap-1.5"><i data-lucide="boxes" class="w-4.5 h-4.5 text-blue-600"></i>판촉물 현재고 & 입고 관리</h2><p class="text-[11px] text-slate-500">수량, 종류, 보관위치, 안전재고 상태 확인</p></div>
+      <div class="flex gap-2">
+        <label class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold flex items-center gap-1 shadow-sm cursor-pointer hover:bg-emerald-700">
+          <i data-lucide="file-spreadsheet" class="w-3 h-3"></i>엑셀 대량 등록
+          <input type="file" id="file-excel-import" accept=".xlsx, .xls" class="hidden">
+        </label>
+        <button id="btn-new-item" class="px-3 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-semibold flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i>신규 품목</button>
+        <button id="btn-stockin" class="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center gap-1 shadow-sm"><i data-lucide="download" class="w-3 h-3"></i>입고 등록</button>
+      </div>
+    </div>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100">
+      <div id="cat-filters" class="flex items-center gap-1.5 overflow-x-auto pb-1"></div>
+      <div class="flex items-center gap-2">
+        <select id="inv-status" class="px-2.5 py-1 text-xs bg-slate-50 border border-slate-200 rounded-xl"><option value="all">모든 상태</option><option value="low">⚠ 부족</option><option value="normal">✅ 여유</option></select>
+        <div class="relative"><input id="inv-search" type="text" placeholder="품목/위치 검색" class="w-44 pl-7 pr-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"><i data-lucide="search" class="w-3 h-3 text-slate-400 absolute left-2 top-2"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="inv-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+  <div id="inv-empty" class="hidden py-12 text-center text-slate-400 text-xs"><i data-lucide="package-x" class="w-8 h-8 mx-auto mb-1 opacity-40"></i>해당 품목 없음</div>
+
+  <!-- 입고 이력 -->
+  <div class="card overflow-hidden mt-6">
+    <div class="p-4 border-b border-slate-100 flex justify-between">
+      <h3 class="text-sm font-bold flex items-center gap-1.5"><i data-lucide="history" class="w-4 h-4 text-emerald-600"></i>입고 이력</h3>
+      <button class="btn-excel px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-1"><i data-lucide="file-spreadsheet" class="w-3 h-3"></i>엑셀</button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead><tr class="bg-slate-50/70 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-100">
+          <th class="px-3 py-2.5">일시</th><th class="px-3 py-2.5">품목</th><th class="px-3 py-2.5 text-center">수량</th><th class="px-3 py-2.5">공급처</th><th class="px-3 py-2.5">담당자</th><th class="px-3 py-2.5">메모</th>
+        </tr></thead>
+        <tbody id="si-tbody"></tbody>
+      </table>
+    </div>
+    <div id="si-empty" class="hidden py-6 text-center text-slate-400 text-xs">입고 기록 없음</div>
+  </div>
+</section>
+
+<!-- ═══════════ 탭 4: 데이터 관리 ═══════════ -->
+<section id="sec-settings" class="tab-section hidden space-y-5">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- 엑셀/백업 -->
+    <div class="card p-5 space-y-3">
+      <div class="flex items-center gap-2.5"><div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><i data-lucide="database" class="w-4.5 h-4.5"></i></div><div><h3 class="text-sm font-bold">엑셀 & 데이터 백업</h3><p class="text-[11px] text-slate-500">보고용 엑셀 / 안전 백업</p></div></div>
+      <div class="space-y-2 pt-2">
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between"><div><div class="text-xs font-bold">📊 관리대장 (.xlsx)</div><div class="text-[11px] text-slate-500">재고+반출+입고 3개 시트</div></div><button class="btn-excel px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1"><i data-lucide="download" class="w-3 h-3"></i>다운</button></div>
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between"><div><div class="text-xs font-bold">💾 원본 백업 (.json)</div><div class="text-[11px] text-slate-500">전체 데이터 JSON 파일</div></div><button id="btn-json" class="px-3.5 py-1.5 bg-slate-800 text-white rounded-xl text-xs font-bold">저장</button></div>
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between"><div><div class="text-xs font-bold">📂 백업에서 복원</div><div class="text-[11px] text-slate-500">이전 백업 파일 불러오기</div></div><label class="px-3.5 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-bold cursor-pointer">선택<input type="file" id="file-json" accept=".json" class="hidden"></label></div>
+      </div>
+    </div>
+    <!-- 팀원 관리 -->
+    <div class="card p-5 space-y-3">
+      <div class="flex items-center gap-2.5"><div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><i data-lucide="users" class="w-4.5 h-4.5"></i></div><div><h3 class="text-sm font-bold">팀원 관리</h3><p class="text-[11px] text-slate-500">반출 시 표시될 팀원 목록</p></div></div>
+      <form id="form-member" class="flex gap-2">
+        <input id="in-member-name" type="text" placeholder="이름+직급" class="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+        <input id="in-member-team" type="text" placeholder="팀명" value="기업영업팀" class="w-28 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <button type="submit" class="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold shrink-0">추가</button>
+      </form>
+      <div id="members-list" class="max-h-52 overflow-y-auto space-y-1 pr-1"></div>
+    </div>
+  </div>
+  <!-- 가이드 -->
+  <div class="card p-5">
+    <h3 class="text-sm font-bold mb-2 flex items-center gap-1.5"><i data-lucide="help-circle" class="w-4 h-4 text-blue-600"></i>활용 가이드</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-600">
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-100"><b class="text-slate-900 block mb-0.5">1. 서버 실행</b><code class="bg-blue-50 text-blue-700 px-1 rounded font-bold">서버실행.bat</code> 더블클릭 → 즉시 실행</div>
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-100"><b class="text-slate-900 block mb-0.5">2. 모바일 접속</b>QR 스캔 또는 Wi-Fi 링크 공유 → 팀원 폰에서 원터치 반출</div>
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-100"><b class="text-slate-900 block mb-0.5">3. 스마트 입력</b><span class="text-blue-700 font-semibold">"구글 운영팀 팀장 우산 1개"</span> 한 줄 입력 → 1초 등록</div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- 모바일 하단 네비 -->
+<nav class="mobile-bottom-nav">
+  <button data-tab="dashboard" class="mob-btn flex flex-col items-center flex-1 py-1 text-blue-600"><i data-lucide="layout-dashboard" class="w-5 h-5 mb-0.5"></i><span class="text-[10px] font-bold">대시보드</span></button>
+  <button data-tab="checkout" class="mob-btn flex flex-col items-center flex-1 py-1 text-slate-400"><i data-lucide="send" class="w-5 h-5 mb-0.5"></i><span class="text-[10px] font-bold">반출</span></button>
+  <button data-tab="inventory" class="mob-btn flex flex-col items-center flex-1 py-1 text-slate-400"><i data-lucide="boxes" class="w-5 h-5 mb-0.5"></i><span class="text-[10px] font-bold">재고</span></button>
+  <button data-tab="settings" class="mob-btn flex flex-col items-center flex-1 py-1 text-slate-400"><i data-lucide="settings" class="w-5 h-5 mb-0.5"></i><span class="text-[10px] font-bold">관리</span></button>
+</nav>
+
+<!-- ═══ 모달: 추가 입고 ═══ -->
+<div id="modal-stockin" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-overlay">
+  <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-3">
+    <div class="flex justify-between border-b border-slate-100 pb-2"><h3 class="text-sm font-bold flex items-center gap-1.5"><i data-lucide="plus-circle" class="w-4 h-4 text-blue-600"></i>추가 입고</h3><button data-close="modal-stockin" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <form id="form-stockin" class="space-y-3">
+      <div><label class="text-xs font-bold mb-0.5 block">품목</label><select id="si-item-sel" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" required></select></div>
+      <div><label class="text-xs font-bold mb-0.5 block">수량</label><div class="flex gap-1.5"><input id="si-qty" type="number" min="1" value="10" class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+        <button type="button" data-add="10" class="si-quick px-2 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold">+10</button>
+        <button type="button" data-add="30" class="si-quick px-2 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold">+30</button>
+        <button type="button" data-add="50" class="si-quick px-2 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold">+50</button>
+        <button type="button" data-add="100" class="si-quick px-2 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold">+100</button></div></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold mb-0.5 block">공급처</label><input id="si-supplier" type="text" value="본사 마케팅총괄팀" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" required></div><div><label class="text-xs font-bold mb-0.5 block">담당자</label><input id="si-manager" type="text" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" required></div></div>
+      <div><label class="text-xs font-bold mb-0.5 block">일시</label><input id="si-date" type="datetime-local" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" required></div>
+      <div><label class="text-xs font-bold mb-0.5 block">메모</label><input id="si-memo" type="text" placeholder="입고 사유" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"></div>
+      <div class="flex justify-end gap-2 pt-1"><button type="button" data-close="modal-stockin" class="px-3.5 py-2 bg-slate-100 rounded-xl text-xs font-semibold">취소</button><button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow">입고 확인</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══ 모달: 신규 품목 ═══ -->
+<div id="modal-newitem" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-overlay">
+  <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-3">
+    <div class="flex justify-between border-b border-slate-100 pb-2"><h3 class="text-sm font-bold flex items-center gap-1.5"><i data-lucide="sparkles" class="w-4 h-4"></i>신규 품목 등록</h3><button data-close="modal-newitem" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <form id="form-new-item" class="space-y-3">
+      <div><label class="text-xs font-bold mb-0.5 block">품목명 <span class="text-rose-500">*</span></label><input id="ni-name" type="text" placeholder="예: 무선 충전패드" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none" required></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold mb-0.5 block">카테고리</label><select id="ni-cat" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"></select></div><div><label class="text-xs font-bold mb-0.5 block">단위</label><input id="ni-unit" type="text" value="개" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"></div></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold mb-0.5 block">초기 수량</label><input id="ni-init" type="number" value="50" min="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"></div><div><label class="text-xs font-bold mb-0.5 block">안전재고</label><input id="ni-safe" type="number" value="10" min="1" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"></div></div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="text-xs font-bold mb-0.5 block">보관위치</label><input id="ni-loc" type="text" placeholder="캐비닛 B-3" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"></div><div><label class="text-xs font-bold mb-0.5 block">단가(원)</label><input id="ni-cost" type="number" value="15000" min="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs"></div></div>
+      <div><label class="text-xs font-bold mb-0.5 block">설명</label><textarea id="ni-desc" rows="2" placeholder="사양, 로고 인쇄 등" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs resize-none"></textarea></div>
+      <div class="flex justify-end gap-2 pt-1"><button type="button" data-close="modal-newitem" class="px-3.5 py-2 bg-slate-100 rounded-xl text-xs font-semibold">취소</button><button type="submit" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow">등록</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div id="toast-box" class="fixed bottom-16 lg:bottom-4 right-4 z-50 flex flex-col gap-2 max-w-xs w-full pointer-events-none"></div>
+
+<!-- JS 로드 순서 -->
+<script src="js/storage.js"></script>
+<script src="js/checkout.js"></script>
+<script src="js/inventory.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

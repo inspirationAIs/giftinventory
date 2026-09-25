@@ -1,0 +1,37 @@
+{
+  "categories": ["시즌/우산","IT/스마트기기","생활용품","사무/문구","VIP/선물세트","골프/레저","위생/소모품"],
+  "teamMembers": [
+    {"name":"김현석","team":"영업팀"},
+    {"name":"황시은","team":"영업팀"},
+    {"name":"신송하","team":"영업팀"},
+    {"name":"신민수","team":"영업팀"},
+    {"name":"임효빈","team":"영업팀"},
+    {"name":"최유리","team":"영업팀"},
+    {"name":"홍원상","team":"영업팀"},
+    {"name":"김지수","team":"영업팀"}
+  ],
+  "items": [
+    {"id":"ITEM-001","name":"고급 3단 자동우산 (통신사 로고)","category":"시즌/우산","unit":"개","currentStock":42,"safeStock":15,"location":"캐비닛 A-1","unitCost":13500,"description":"원터치 전자동 개폐, UV 차단 암막 원단"},
+    {"id":"ITEM-002","name":"맥세이프 무선충전 보조배터리 10000mAh","category":"IT/스마트기기","unit":"개","currentStock":18,"safeStock":10,"location":"금고 B-2","unitCost":24000,"description":"초슬림 자석 부착형 맥세이프 15W 고속충전"},
+    {"id":"ITEM-003","name":"스타벅스 스테인리스 보온 텀블러 473ml","category":"생활용품","unit":"개","currentStock":8,"safeStock":10,"location":"캐비닛 A-3","unitCost":18000,"description":"이중 진공 구조, 로고 음각 인쇄"},
+    {"id":"ITEM-004","name":"3in1 멀티 고속 충전케이블","category":"IT/스마트기기","unit":"개","currentStock":65,"safeStock":20,"location":"수납장 C-1","unitCost":4500,"description":"패브릭 꼬임 방지, C타입/8핀/마이크로 호환"},
+    {"id":"ITEM-005","name":"볼펜 & 하드커버 다이어리 세트","category":"사무/문구","unit":"세트","currentStock":30,"safeStock":15,"location":"캐비닛 B-1","unitCost":9800,"description":"독일제 리필심 메탈 볼펜 + 가죽 표지 다이어리"},
+    {"id":"ITEM-006","name":"프리미엄 호텔 시그니처 디퓨저 200ml","category":"VIP/선물세트","unit":"세트","currentStock":5,"safeStock":5,"location":"VIP 캐비닛","unitCost":35000,"description":"VIP 임원 미팅용 고급 리드 디퓨저"},
+    {"id":"ITEM-007","name":"타이틀리스트 Pro V1 골프공 4구 세트","category":"골프/레저","unit":"세트","currentStock":4,"safeStock":6,"location":"VIP 캐비닛","unitCost":42000,"description":"골프 라운딩 접대용 세트"},
+    {"id":"ITEM-008","name":"휴대용 손소독 물티슈 20매입","category":"위생/소모품","unit":"팩","currentStock":120,"safeStock":30,"location":"창고 박스 1번","unitCost":800,"description":"대량 배포용 물티슈"}
+  ],
+  "stockIns": [
+    {"id":"IN-20260901-01","itemId":"ITEM-001","itemName":"고급 3단 자동우산 (통신사 로고)","quantity":50,"date":"2026-09-01 10:00","supplier":"본사 마케팅총괄팀","manager":"김영업 팀장","memo":"9월 가을 프로모션 정기 입고"},
+    {"id":"IN-20260901-02","itemId":"ITEM-002","itemName":"맥세이프 무선충전 보조배터리 10000mAh","quantity":30,"date":"2026-09-01 10:15","supplier":"본사 B2B마케팅팀","manager":"김영업 팀장","memo":"5G 요금제 판촉용"},
+    {"id":"IN-20260905-01","itemId":"ITEM-003","itemName":"스타벅스 스테인리스 보온 텀블러 473ml","quantity":20,"date":"2026-09-05 14:00","supplier":"파트너십 제휴사","manager":"이민우 차장","memo":"지사 특별 프로모션 지원"},
+    {"id":"IN-20260910-01","itemId":"ITEM-004","itemName":"3in1 멀티 고속 충전케이블","quantity":100,"date":"2026-09-10 09:30","supplier":"본사 마케팅총괄팀","manager":"최준혁 대리","memo":"소모품 정기 수급"},
+    {"id":"IN-20260912-01","itemId":"ITEM-006","itemName":"프리미엄 호텔 시그니처 디퓨저 200ml","quantity":10,"date":"2026-09-12 11:00","supplier":"VIP 전용업체","manager":"김영업 팀장","memo":"전략 고객사용 긴급 입고"}
+  ],
+  "checkouts": [
+    {"id":"OUT-20260925-01","itemId":"ITEM-001","itemName":"고급 3단 자동우산 (통신사 로고)","quantity":1,"date":"2026-09-25 14:30","team":"기업영업1팀","requester":"김영업 팀장","recipient":"구글 운영팀 팀장","purpose":"B2B 전용회선 재계약 미팅","memo":"우산 1개 지급 완료"},
+    {"id":"OUT-20260925-02","itemId":"ITEM-002","itemName":"맥세이프 무선충전 보조배터리 10000mAh","quantity":2,"date":"2026-09-25 11:20","team":"솔루션영업팀","requester":"박소희 과장","recipient":"카카오 인프라 기획파트","purpose":"클라우드 연계망 제안 미팅","memo":"파트장/매니저용"},
+    {"id":"OUT-20260924-01","itemId":"ITEM-003","itemName":"스타벅스 스테인리스 보온 텀블러 473ml","quantity":3,"date":"2026-09-24 16:00","team":"무선B2B영업팀","requester":"최준혁 대리","recipient":"현대오토에버 통신담당자","purpose":"법인폰 200회선 신규 개통 감사","memo":"텀블러 3개 전달"},
+    {"id":"OUT-20260923-01","itemId":"ITEM-001","itemName":"고급 3단 자동우산 (통신사 로고)","quantity":5,"date":"2026-09-23 10:10","team":"기업영업1팀","requester":"이민우 차장","recipient":"LG CNS 인프라팀","purpose":"정기 방문 미팅","memo":"팀원 공유용"},
+    {"id":"OUT-20260922-01","itemId":"ITEM-007","itemName":"타이틀리스트 Pro V1 골프공 4구 세트","quantity":1,"date":"2026-09-22 17:40","team":"기업영업1팀","requester":"김영업 팀장","recipient":"SK텔레콤 B2B 총괄상무","purpose":"상생협력 네트워킹 라운딩","memo":"고급 선물 포장 완료"}
+  ]
+}
