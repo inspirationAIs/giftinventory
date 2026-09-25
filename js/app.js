@@ -95,9 +95,9 @@ const App = (function() {
     const b = document.getElementById('conn-badge');
     const t = document.getElementById('conn-text');
     if (!b || !t) return;
-    if (st.mode === 'server') {
+    if (st.mode === 'server' || st.mode === 'cloud') {
       b.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
-      t.textContent = '실시간 연동 (Wi-Fi: ' + st.serverInfo.localIp + ')';
+      t.textContent = st.mode === 'cloud' ? '클라우드 연동 완료' : '실시간 연동 (Wi-Fi: ' + st.serverInfo.localIp + ')';
     } else {
       b.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200';
       t.textContent = '오프라인 로컬 모드';
