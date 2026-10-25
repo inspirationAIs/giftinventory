@@ -20,8 +20,7 @@ const Inventory = (function() {
     const btnStockIn = document.getElementById('btn-stockin');
     if (btnStockIn) btnStockIn.onclick = () => openStockInModal();
 
-    const fiExcel = document.getElementById('file-excel-import');
-    if (fiExcel) fiExcel.onchange = handleExcelImport;
+    document.querySelectorAll('.file-excel-sync').forEach(fi => fi.onchange = handleExcelImport);
 
     const fNew = document.getElementById('form-new-item');
     if (fNew) fNew.onsubmit = handleNewItem;
@@ -177,53 +176,144 @@ const Inventory = (function() {
       </tr>`).join('');
   }
 
-  /* 엑셀 임포트 */
+  /* ── 엑셀 업로드 → 재고현황 동기화 ── */
+  let pendingRows = null;
+  const COL_ALIASES = {
+    id:['품목코드','코드','id','ID'],
+    name:['품목명','품목','품명','name'],
+    category:['카테고리','분류','category'],
+    unit:['단위','unit'],
+    currentStock:['현재고','재고','수량','현재수량','재고수량'],
+    safeStock:['안전재고','안전수량'],
+    location:['보관위치','위치','location'],
+    unitCost:['단가','가격','unitCost'],
+    description:['설명','비고','description']
+  };
+  const NUM_FIELDS = ['currentStock','safeStock','unitCost'];
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  function toNum(v) {
+    if (v === null || v === undefined || v === '') return 0;
+    const n = Number(String(v).replace(/[^\d.-]/g, ''));
+    return isNaN(n) ? 0 : Math.round(n);
+  }
+
+  function parseWorkbook(workbook) {
+    // '재고현황' 시트 우선, 없으면 첫 번째 시트
+    const sheetName = workbook.SheetNames.find(n => n.replace(/\s/g,'').includes('재고현황')) || workbook.SheetNames[0];
+    const raw = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+    if (!raw.length) throw new Error(`[${sheetName}] 시트에 데이터가 없습니다.`);
+
+    // 헤더 매핑 (공백 무시)
+    const headers = Object.keys(raw[0]);
+    const map = {};
+    Object.entries(COL_ALIASES).forEach(([field, aliases]) => {
+      const h = headers.find(h => aliases.includes(String(h).replace(/\s/g,'')));
+      if (h) map[field] = h;
+    });
+    if (!map.name && !map.id) throw new Error('엑셀에 "품목명" 또는 "품목코드" 열이 필요합니다.');
+
+    const rows = [];
+    raw.forEach(r => {
+      const row = {};
+      Object.entries(map).forEach(([field, h]) => {
+        const v = r[h];
+        row[field] = NUM_FIELDS.includes(field) ? toNum(v) : String(v ?? '').trim();
+      });
+      if (!row.name && !row.id) return; // 빈 줄 건너뛰기
+      rows.push(row);
+    });
+    if (!rows.length) throw new Error('반영할 품목 행이 없습니다.');
+    return { sheetName, rows, mapped: Object.keys(map) };
+  }
+
   function handleExcelImport(e) {
-    const file = e.target.files[0];
+    const input = e.target;
+    const file = input.files[0];
     if (!file) return;
     if (typeof XLSX === 'undefined') { App.toast('엑셀 라이브러리가 로드되지 않았습니다.', 'error'); return; }
-    
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(firstSheet);
-        
-        if (!rows || rows.length === 0) {
-          App.toast('엑셀 파일에 데이터가 없습니다.', 'warning');
-          return;
-        }
 
-        let count = 0;
-        for (const row of rows) {
-          const name = row['품목명'] || row['name'] || row['품목'];
-          if (!name) continue;
-          
-          await Storage.addItem({
-            name: name,
-            category: row['카테고리'] || row['category'] || '기타',
-            unit: row['단위'] || row['unit'] || '개',
-            initialStock: parseInt(row['수량'] || row['초기수량'] || row['재고'] || row['현재고']) || 0,
-            safeStock: parseInt(row['안전재고']) || 10,
-            location: row['보관위치'] || row['위치'] || '',
-            unitCost: parseInt(row['단가'] || row['가격']) || 0,
-            description: row['설명'] || row['비고'] || ''
-          });
-          count++;
-        }
-        
-        App.toast(`총 ${count}개의 품목이 성공적으로 등록되었습니다.`, 'success');
-        renderCatFilter(); render(); renderStockInLogs(); Checkout.renderItems(); Dashboard.refresh();
-      } catch(error) {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const workbook = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+        const parsed = parseWorkbook(workbook);
+        pendingRows = parsed.rows;
+        openSyncPreview(file.name, parsed);
+      } catch (error) {
         console.error(error);
-        App.toast('엑셀 파일 처리 중 오류가 발생했습니다.', 'error');
+        App.toast(error.message || '엑셀 파일 처리 중 오류가 발생했습니다.', 'error');
       } finally {
-        document.getElementById('file-excel-import').value = ''; // Reset input
+        input.value = ''; // 같은 파일 재선택 허용
       }
     };
     reader.readAsArrayBuffer(file);
+  }
+
+  function openSyncPreview(fileName, parsed) {
+    const modal = document.getElementById('modal-excel-sync');
+    if (!modal) return;
+    const p = Storage.previewInventorySync(parsed.rows);
+    const fmt = (f, v) => NUM_FIELDS.includes(f) ? Number(v||0).toLocaleString() : esc(v || '-');
+
+    document.getElementById('xs-file').textContent = `${fileName} · [${parsed.sheetName}] 시트 · ${parsed.rows.length}행`;
+    document.getElementById('xs-summary').innerHTML = [
+      ['변경', p.updates.length, 'bg-blue-50 text-blue-700 border-blue-200'],
+      ['신규', p.adds.length, 'bg-emerald-50 text-emerald-700 border-emerald-200'],
+      ['동일', p.same.length, 'bg-slate-50 text-slate-600 border-slate-200'],
+      ['엑셀에 없음', p.missing.length, 'bg-amber-50 text-amber-700 border-amber-200']
+    ].map(([l, n, c]) => `<div class="rounded-xl border p-2 text-center ${c}"><div class="text-lg font-black">${n}</div><div class="text-[11px] font-semibold">${l}</div></div>`).join('');
+
+    let html = '';
+    p.updates.forEach(u => {
+      html += `<tr class="border-b border-slate-100"><td class="px-2 py-1.5"><span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">변경</span></td>
+        <td class="px-2 py-1.5 font-semibold">${esc(u.item.name)}</td>
+        <td class="px-2 py-1.5">${u.changes.map(c => `<div><span class="text-slate-400">${c.label}:</span> <span class="line-through text-slate-400">${fmt(c.field, c.from)}</span> → <b class="${c.field==='currentStock'?'text-blue-700':''}">${fmt(c.field, c.to)}</b></div>`).join('')}</td></tr>`;
+    });
+    p.adds.forEach(r => {
+      html += `<tr class="border-b border-slate-100"><td class="px-2 py-1.5"><span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">신규</span></td>
+        <td class="px-2 py-1.5 font-semibold">${esc(r.name || r.id)}</td>
+        <td class="px-2 py-1.5">현재고 <b>${fmt('currentStock', r.currentStock)}</b>${r.category ? ' · ' + esc(r.category) : ''}</td></tr>`;
+    });
+    p.missing.forEach(i => {
+      html += `<tr class="border-b border-slate-100 xs-missing"><td class="px-2 py-1.5"><span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">없음</span></td>
+        <td class="px-2 py-1.5 font-semibold">${esc(i.name)}</td>
+        <td class="px-2 py-1.5 text-slate-400">엑셀에 없는 품목 (기본: 그대로 유지)</td></tr>`;
+    });
+    document.getElementById('xs-tbody').innerHTML = html || `<tr><td colspan="3" class="py-6 text-center text-slate-400">변경 사항이 없습니다. 웹사이트 재고가 엑셀과 동일합니다.</td></tr>`;
+
+    const rmWrap = document.getElementById('xs-remove-wrap');
+    const rm = document.getElementById('xs-remove');
+    rm.checked = false;
+    rmWrap.classList.toggle('hidden', !p.missing.length);
+
+    const apply = document.getElementById('xs-apply');
+    apply.disabled = !(p.updates.length || p.adds.length || p.missing.length);
+    apply.onclick = applySync;
+
+    modal.classList.remove('hidden'); modal.classList.add('flex');
+    lucide.createIcons();
+  }
+
+  async function applySync() {
+    if (!pendingRows) return;
+    const removeMissing = document.getElementById('xs-remove').checked;
+    if (removeMissing && !confirm('엑셀에 없는 품목을 웹사이트에서 삭제합니다. 계속할까요?')) return;
+    const btn = document.getElementById('xs-apply');
+    btn.disabled = true; btn.textContent = '반영 중…';
+    try {
+      const r = await Storage.applyInventorySync(pendingRows, { removeMissing });
+      pendingRows = null;
+      closeModal('modal-excel-sync');
+      const rmTxt = removeMissing && r.missing.length ? `, 삭제 ${r.missing.length}건` : '';
+      App.toast(`✅ 엑셀 반영 완료! (변경 ${r.updates.length}건, 신규 ${r.adds.length}건${rmTxt})`, 'success');
+      renderCatFilter(); render(); renderStockInLogs(); Checkout.renderItems(); Dashboard.refresh();
+    } catch (e) {
+      console.error(e);
+      App.toast('반영 중 오류: ' + e.message, 'error');
+    } finally {
+      btn.textContent = '재고현황에 반영';
+    }
   }
 
   return { init, render, renderStockInLogs, openStockInModal, openNewItemModal, closeModal, handleExcelImport };

@@ -169,8 +169,59 @@ const Storage = (function() {
     return {record:rec,updatedStock:item.currentStock};
   }
 
+  function _nextItemId(){
+    const max=(db.items||[]).reduce((m,i)=>{const n=parseInt(String(i.id).replace(/\D/g,''),10);return isNaN(n)?m:Math.max(m,n);},0);
+    return 'ITEM-'+String(max+1).padStart(3,'0');
+  }
+
+  /* ── 엑셀 재고현황 동기화 ──
+     rows: [{id,name,category,unit,currentStock,safeStock,location,unitCost,description}] (엑셀에 있는 컬럼만 값 존재)
+     반환: {updates:[{item,row,changes:[{field,label,from,to}]}], adds:[row], same:[item], missing:[item]} */
+  const SYNC_FIELDS={name:'품목명',category:'카테고리',unit:'단위',currentStock:'현재고',safeStock:'안전재고',location:'보관위치',unitCost:'단가',description:'설명'};
+  function _matchItem(row, used){
+    const items=db.items||[];
+    let it=null;
+    if(row.id) it=items.find(i=>i.id===row.id && !used.has(i.id));
+    if(!it && row.name) it=items.find(i=>i.name.trim()===row.name && !used.has(i.id));
+    return it;
+  }
+  function previewInventorySync(rows){
+    const used=new Set(), res={updates:[],adds:[],same:[],missing:[]};
+    rows.forEach(row=>{
+      const it=_matchItem(row,used);
+      if(!it){ res.adds.push(row); return; }
+      used.add(it.id);
+      const changes=[];
+      Object.keys(SYNC_FIELDS).forEach(f=>{
+        if(row[f]===undefined) return;
+        if(f==='name' && !row[f]) return; // 품목명 빈칸은 무시
+        if(String(it[f]??'')!==String(row[f])) changes.push({field:f,label:SYNC_FIELDS[f],from:it[f],to:row[f]});
+      });
+      if(changes.length) res.updates.push({item:it,row,changes}); else res.same.push(it);
+    });
+    res.missing=(db.items||[]).filter(i=>!used.has(i.id));
+    return res;
+  }
+  async function applyInventorySync(rows, opts={}){
+    const p=previewInventorySync(rows);
+    p.updates.forEach(u=>u.changes.forEach(c=>{u.item[c.field]=c.to;}));
+    p.adds.forEach(row=>{
+      const id=(row.id && !db.items.some(i=>i.id===row.id))?row.id:_nextItemId();
+      db.items.push({id,name:row.name||row.id,category:row.category||'기타',unit:row.unit||'개',currentStock:row.currentStock||0,safeStock:row.safeStock??10,location:row.location||'',unitCost:row.unitCost||0,description:row.description||''});
+    });
+    if(opts.removeMissing && p.missing.length){
+      const rm=new Set(p.missing.map(i=>i.id));
+      db.items=db.items.filter(i=>!rm.has(i.id));
+    }
+    // 엑셀에 새 카테고리가 있으면 카테고리 목록 보강
+    db.categories=[...new Set([...(db.categories||[]),...db.items.map(i=>i.category).filter(Boolean)])];
+    db.lastExcelSync=_now();
+    await save();
+    return p;
+  }
+
   async function addItem(d){
-    const id='ITEM-'+String(db.items.length+1).padStart(3,'0');
+    const id=_nextItemId();
     const qty=Number(d.initialStock)||0;
     const item={id,name:d.name.trim(),category:d.category||'기타',unit:d.unit||'개',currentStock:qty,safeStock:Number(d.safeStock)||10,location:d.location||'',unitCost:Number(d.unitCost)||0,description:d.description||''};
     db.items.push(item);
@@ -218,5 +269,5 @@ const Storage = (function() {
     db=parsed; await save();
   }
 
-  return {init,poll,getDB,getItems,getItem,getCheckouts,getStockIns,getCategories,getTeamMembers,getServerStatus,addCheckout,cancelCheckout,addStockIn,addItem,addTeamMember,exportExcel,exportJson,importJson};
+  return {init,poll,getDB,getItems,getItem,getCheckouts,getStockIns,getCategories,getTeamMembers,getServerStatus,addCheckout,cancelCheckout,addStockIn,addItem,addTeamMember,exportExcel,exportJson,importJson,previewInventorySync,applyInventorySync};
 })();
