@@ -207,7 +207,7 @@ const Storage = (function() {
     p.updates.forEach(u=>u.changes.forEach(c=>{u.item[c.field]=c.to;}));
     p.adds.forEach(row=>{
       const id=(row.id && !db.items.some(i=>i.id===row.id))?row.id:_nextItemId();
-      db.items.push({id,name:row.name||row.id,category:row.category||'기타',unit:row.unit||'개',currentStock:row.currentStock||0,safeStock:row.safeStock??10,location:row.location||'',unitCost:row.unitCost||0,description:row.description||''});
+      db.items.push({id,name:row.name||row.id,category:row.category||'기타',unit:row.unit||'개',currentStock:row.currentStock||0,safeStock:row.safeStock??row.safeStockDefault??10,location:row.location||'',unitCost:row.unitCost||0,description:row.description||''});
     });
     if(opts.removeMissing && p.missing.length){
       const rm=new Set(p.missing.map(i=>i.id));

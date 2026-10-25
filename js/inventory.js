@@ -183,13 +183,16 @@ const Inventory = (function() {
     name:['품목명','품목','품명','name'],
     category:['카테고리','분류','category'],
     unit:['단위','unit'],
-    currentStock:['현재고','재고','수량','현재수량','재고수량'],
+    currentStock:['현재고','잔여수량','잔여','잔량','재고수량','현재수량','재고','수량'],
     safeStock:['안전재고','안전수량'],
     location:['보관위치','위치','location'],
     unitCost:['단가','가격','unitCost'],
-    description:['설명','비고','description']
+    description:['설명','비고','description'],
+    purchaseQty:['구매수량','입고수량'],
+    purchaseDate:['구매일','입고일','구매월']
   };
-  const NUM_FIELDS = ['currentStock','safeStock','unitCost'];
+  const NUM_FIELDS = ['currentStock','safeStock','unitCost','purchaseQty'];
+  const norm = s => String(s ?? '').replace(/\s/g, '');
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
   function toNum(v) {
@@ -200,27 +203,45 @@ const Inventory = (function() {
 
   function parseWorkbook(workbook) {
     // '재고현황' 시트 우선, 없으면 첫 번째 시트
-    const sheetName = workbook.SheetNames.find(n => n.replace(/\s/g,'').includes('재고현황')) || workbook.SheetNames[0];
-    const raw = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
-    if (!raw.length) throw new Error(`[${sheetName}] 시트에 데이터가 없습니다.`);
+    const sheetName = workbook.SheetNames.find(n => norm(n).includes('재고현황')) || workbook.SheetNames[0];
+    const grid = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '', blankrows: false });
+    if (!grid.length) throw new Error(`[${sheetName}] 시트에 데이터가 없습니다.`);
 
-    // 헤더 매핑 (공백 무시)
-    const headers = Object.keys(raw[0]);
+    // 머리글 행 자동 탐색 (상단 제목/안내 문구가 있어도 OK) — '품목/품목명/품목코드' 칸이 있는 첫 행
+    const nameKeys = [...COL_ALIASES.name, ...COL_ALIASES.id];
+    const hIdx = grid.slice(0, 20).findIndex(r => r.some(c => nameKeys.includes(norm(c))));
+    if (hIdx === -1) throw new Error('엑셀에서 "품목" 또는 "품목명" 머리글을 찾을 수 없습니다.');
+    const headers = grid[hIdx].map(norm);
+
+    // 열 매핑: 별칭 우선순위대로 첫 번째로 일치하는 열 사용
     const map = {};
     Object.entries(COL_ALIASES).forEach(([field, aliases]) => {
-      const h = headers.find(h => aliases.includes(String(h).replace(/\s/g,'')));
-      if (h) map[field] = h;
+      for (const a of aliases) {
+        const idx = headers.indexOf(norm(a));
+        if (idx !== -1 && !Object.values(map).includes(idx)) { map[field] = idx; break; }
+      }
     });
-    if (!map.name && !map.id) throw new Error('엑셀에 "품목명" 또는 "품목코드" 열이 필요합니다.');
 
     const rows = [];
-    raw.forEach(r => {
+    let lastDate = '';
+    grid.slice(hIdx + 1).forEach(r => {
       const row = {};
-      Object.entries(map).forEach(([field, h]) => {
-        const v = r[h];
+      Object.entries(map).forEach(([field, idx]) => {
+        const v = r[idx];
         row[field] = NUM_FIELDS.includes(field) ? toNum(v) : String(v ?? '').trim();
       });
+      // 병합된 '구매일' 칸은 아래 행으로 채우기
+      if (map.purchaseDate !== undefined) { if (row.purchaseDate) lastDate = row.purchaseDate; else row.purchaseDate = lastDate; }
       if (!row.name && !row.id) return; // 빈 줄 건너뛰기
+      if (/^(합계|소계|총계|total)$/i.test(norm(row.name))) return;
+
+      // 구매일/구매수량 → 설명에 기록 (설명 열이 없을 때)
+      if (map.description === undefined && (row.purchaseDate || row.purchaseQty)) {
+        row.description = [row.purchaseDate && `구매 ${row.purchaseDate}`, row.purchaseQty && `구매수량 ${row.purchaseQty}`].filter(Boolean).join(' · ');
+      }
+      // 안전재고 열이 없으면: 구매수량의 20% (최소 1)
+      if (map.safeStock === undefined) row.safeStockDefault = row.purchaseQty ? Math.max(1, Math.round(row.purchaseQty * 0.2)) : 1;
+      delete row.purchaseQty; delete row.purchaseDate;
       rows.push(row);
     });
     if (!rows.length) throw new Error('반영할 품목 행이 없습니다.');
@@ -243,6 +264,7 @@ const Inventory = (function() {
       } catch (error) {
         console.error(error);
         App.toast(error.message || '엑셀 파일 처리 중 오류가 발생했습니다.', 'error');
+        alert('엑셀 업로드 실패\n\n' + (error.message || '엑셀 파일 처리 중 오류가 발생했습니다.'));
       } finally {
         input.value = ''; // 같은 파일 재선택 허용
       }
@@ -284,7 +306,8 @@ const Inventory = (function() {
 
     const rmWrap = document.getElementById('xs-remove-wrap');
     const rm = document.getElementById('xs-remove');
-    rm.checked = false;
+    // 기존 품목과 하나도 겹치지 않으면(=새 장부로 교체) 기존 품목 삭제를 기본 선택
+    rm.checked = p.missing.length > 0 && (p.updates.length + p.same.length === 0);
     rmWrap.classList.toggle('hidden', !p.missing.length);
 
     const apply = document.getElementById('xs-apply');
