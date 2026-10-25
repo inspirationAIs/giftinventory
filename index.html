@@ -48,7 +48,7 @@
       <div id="conn-badge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span id="conn-text">연결 확인 중…</span>
       </div>
-      <button class="btn-excel hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>엑셀</button>
+      <button class="btn-excel hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 shadow-sm transition-colors" title="현재 재고와 반출 내역을 엑셀(.xlsx) 파일로 다운로드합니다"><i data-lucide="download" class="w-3.5 h-3.5"></i>엑셀 다운로드</button>
     </div>
   </div>
   <!-- 데스크톱 탭 -->
@@ -79,7 +79,6 @@
     <div class="flex flex-wrap gap-2 shrink-0">
       <button id="btn-a2hs" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-yellow-400 text-yellow-950 text-xs font-bold shadow hover:bg-yellow-300 transition-colors hidden"><i data-lucide="smartphone" class="w-3.5 h-3.5"></i>앱 설치</button>
       <button onclick="App.switchTab('checkout')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-blue-700 text-xs font-bold shadow"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>반출 등록</button>
-      <button onclick="Inventory.openStockInModal()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 text-white text-xs font-bold border border-white/20"><i data-lucide="download" class="w-3.5 h-3.5"></i>입고 등록</button>
     </div>
   </div>
 
@@ -424,10 +423,10 @@
 <div id="toast-box" class="fixed bottom-16 lg:bottom-4 right-4 z-50 flex flex-col gap-2 max-w-xs w-full pointer-events-none"></div>
 
 <!-- JS 로드 순서 -->
-<script src="js/storage.js?v=20261025b"></script>
-<script src="js/checkout.js?v=20261025b"></script>
-<script src="js/inventory.js?v=20261025b"></script>
-<script src="js/dashboard.js?v=20261025b"></script>
+<script src="js/storage.js?v=20261025c"></script>
+<script src="js/checkout.js?v=20261025c"></script>
+<script src="js/inventory.js?v=20261025c"></script>
+<script src="js/dashboard.js?v=20261025c"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -435,6 +434,6 @@
     });
   }
 </script>
-<script src="js/app.js?v=20261025b"></script>
+<script src="js/app.js?v=20261025c"></script>
 </body>
 </html>
